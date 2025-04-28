@@ -1,4 +1,5 @@
 global using static Global;
+using System.Diagnostics;
 
 public static class Global
 {
