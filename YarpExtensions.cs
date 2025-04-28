@@ -1,15 +1,22 @@
-using Yarp.ReverseProxy.Configuration;
-
 public static class YarpExtensions
 {
-    public static void AddYarp(this WebApplicationBuilder builder, Dictionary<string, string> rules)
+    public static void AddYarp(this WebApplicationBuilder builder, Dictionary<string, Rule> rules)
     {
         var index = 0;
-        var routes = rules.Keys.Select(key => new RouteConfig
+        var routes = rules.Select(pair =>
         {
-            ClusterId = $"cluster-{index}",
-            RouteId   = $"id-{index++}",
-            Match     = new() { Path = key }
+            var (key, value) = pair;
+            var result = new RouteConfig
+            {
+                ClusterId = $"cluster-{index}",
+                RouteId   = $"id-{index++}",
+                Match     = new() { Path = key }
+            };
+
+            if (value.Remove != null)
+                result = result.WithTransformPathRemovePrefix(value.Remove);
+            
+            return result;
         }).ToArray();
 
         index = 0;
@@ -37,5 +44,13 @@ public static class YarpExtensions
             if (predicate(context.Request))
                 await next();
         });
+    }
+
+    public record Rule(string Path)
+    {
+        public string Remove;
+
+        public static implicit operator string(Rule rule) => rule.Path;
+        public static implicit operator Rule(string path) => new(path);
     }
 }
